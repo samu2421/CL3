@@ -1,0 +1,329 @@
+Assig 1
+
+#pip install numpy
+import numpy as np
+
+def union(A, B):
+    result = {}
+    for i in A:
+        if A[i] > B[i]:
+            result[i] = A[i]
+        else:
+            result[i] = B[i]
+    print("Union of two sets is", result, '\n')
+
+
+def intersection(A, B):
+    result = {}
+    for i in A:
+        if A[i] < B[i]:
+            result[i] = A[i]
+        else:
+            result[i] = B[i]
+    print("Intersection of two sets is", result, '\n')
+
+
+def complement(A, B):
+    result = {}
+    result1 = {}
+    for i in A:
+        result[i] = round(1 - A[i], 2)
+    for i in B:
+        result1[i] = round(1 - B[i], 2)
+    print("Complement of  1st set is", result)
+    print("Complement of  2nd set is", result1, '\n')
+
+
+def difference(A, B):
+    result = {}
+    for i in A:
+        result[i] = round(min(A[i], 1 - B[i]), 2)
+    print("Difference of two sets is", result, '\n')
+
+
+def cartprod(A, B):
+    R = [[] for i in range(len(A))]
+    i = 0
+    for x in A:
+        for y in B:
+            R[i].append(min(A[x], B[y]))
+        i += 1
+    print("Cartesian Product is", R, "\n")
+
+
+def maxmin():
+    R = [[0.5, 0.8, 0.2], [0.3, 0.6, 0.4]]
+    S = [[0.7, 0.4], [0.5, 0.6], [0.2, 0.8]]
+
+    print("\nR:", R)
+    print("S:", S)
+
+    m, n = len(R), len(R[0])
+    o = len(S[0])
+    composition = np.zeros((m, o))
+
+    for i in range(m):
+        for k in range(o):
+            composition[i][k] = max([min(R[i][j], S[j][k]) for j in range(n)])
+
+    return composition
+
+
+A = {'a': 0.5, 'b': 0.8, 'c': 0.2}
+B = {'a': 0.7, 'b': 0.4, 'c': 0.6}
+
+print(A)
+print(B)
+print('\n')
+
+union(A, B)
+intersection(A, B)
+complement(A, B)
+difference(A, B)
+cartprod(A, B)
+
+result = maxmin()
+print("\nMax-Min Composition is", result)
+
+Assig 2
+
+! pip install deap
+! pip install scoop
+#pip install scikit-learn
+
+import random
+from deap import base, creator, tools, algorithms
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+scaler = StandardScaler()
+X_normalized = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_normalized, y, test_size=0.2, random_state=42)
+
+def evaluate(individual):
+    neurons = individual[0]
+    layers = individual[1]
+
+    model = MLPClassifier(hidden_layer_sizes=(neurons,) * layers, random_state=42, max_iter=10000)
+    model.fit(X_train, y_train)
+
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    print(f'n_Neurons: {neurons}. n_Layers:{layers}. ___ACC___: {accuracy}\n')
+
+    return accuracy,
+
+POPULATION_SIZE = 10
+GENERATIONS = 5
+
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+toolbox = base.Toolbox()
+
+toolbox.register("attr_neurons", random.randint, 1, 100)
+toolbox.register("attr_layers", random.randint, 1, 5)
+toolbox.register("individual", tools.initCycle, creator.Individual, (toolbox.attr_neurons, toolbox.attr_layers), n=1)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+toolbox.register("evaluate", evaluate)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutUniformInt, low=1, up=100, indpb=0.2)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+population = toolbox.population(n=POPULATION_SIZE)
+
+for gen in range(GENERATIONS):
+    offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
+
+    fitnesses = toolbox.map(toolbox.evaluate, offspring)
+    for ind, fit in zip(offspring, fitnesses):
+        ind.fitness.values = fit
+
+    population = toolbox.select(offspring, k=len(population))
+
+best_individual = tools.selBest(population, k=1)[0]
+best_params = best_individual
+
+print("Best Parameters:", best_params)
+
+Assig 3
+
+#pip install tensorflow
+#pip install tensorflow-hub
+#pip install matplotlib
+#pip install numpy
+#pip install opencv-python
+"""
+! pip install tensorflow_hub
+pip install opencv-contrib-python
+pip install cv2
+pip install opencv-python
+"""
+
+import tensorflow_hub as hub
+import tensorflow as tf
+from matplotlib import pyplot as plt
+import numpy as np
+import cv2
+
+model = hub.load('https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2')
+
+def load_image(img_path):
+    img = tf.io.read_file(img_path)
+    img = tf.image.decode_image(img, channels=3)
+    img = tf.image.convert_image_dtype(img, tf.float32)
+    img = img[tf.newaxis, :]
+    return img
+
+content_image = load_image("D:/4th Year/8th semister/Computational Intelligence lab/car1.jpeg")
+style_image = load_image("D:/4th Year/8th semister/Computational Intelligence lab/ab2.jpeg")
+
+stylized_image = model(tf.constant(load_image("D:/4th Year/8th semister/Computational Intelligence lab/car1.jpeg")), tf.constant(load_image("D:/4th Year/8th semister/Computational Intelligence lab/ab2.jpeg")))[0]
+
+plt.imshow(np.squeeze(stylized_image))
+plt.show()
+
+Assig 4
+
+! pip install deap
+! pip install scoop
+
+import random
+import numpy as np
+from deap import base, creator, tools, algorithms
+
+# Create the FitnessMax and Individual classes using the creator
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+toolbox = base.Toolbox()
+toolbox.register("attr_bool", random.randint, 0, 1)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, 100)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+# Define the evaluation function
+def evalOneMax(individual):
+    return sum(individual),
+
+toolbox.register("evaluate", evalOneMax)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+def main():
+    pop = toolbox.population(n=300)
+    hof = tools.HallOfFame(1)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
+
+    pop, log = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=40,
+                                   stats=stats, halloffame=hof, verbose=True)
+
+if __name__ == "__main__":
+    main()
+
+Assig 5
+
+#pip install numpy
+import numpy as np
+
+class AntColony:
+    def __init__(self, distances, n_ants, n_iterations, decay, alpha=1, beta=3):
+        self.distances = distances
+        self.pheromone = np.ones_like(distances, dtype=float)
+        self.n_ants = n_ants
+        self.n_iterations = n_iterations
+        self.decay = decay
+        self.alpha = alpha
+        self.beta = beta
+
+    def run(self):
+        n_cities = len(self.distances)
+        best_route = None
+        best_distance = np.inf
+
+        for _ in range(self.n_iterations):
+            routes = self.generate_routes()
+            self.update_pheromone(routes)
+
+            shortest_route_index = np.argmin([self.route_distance(route) for route in routes])
+            shortest_distance = self.route_distance(routes[shortest_route_index])
+
+            if shortest_distance < best_distance:
+                best_distance = shortest_distance
+                best_route = routes[shortest_route_index]
+
+            self.pheromone *= self.decay
+
+        return best_route, best_distance
+
+    def generate_routes(self):
+        n_cities = len(self.distances)
+        routes = []
+
+        for _ in range(self.n_ants):
+            visited = [0]
+            unvisited = list(range(1, n_cities))
+
+            while unvisited:
+                next_city = self.select_next_city(visited[-1], unvisited)
+                visited.append(next_city)
+                unvisited.remove(next_city)
+
+            route = visited + [visited[0]]  # Return to start city
+            routes.append(route)
+
+        return routes
+
+    def select_next_city(self, current_city, unvisited):
+        pheromone = self.pheromone[current_city, unvisited]
+        heuristic = 1 / self.distances[current_city, unvisited]
+        probabilities = (pheromone ** self.alpha) * (heuristic ** self.beta)
+        probabilities /= probabilities.sum()
+        next_city = np.random.choice(unvisited, p=probabilities)
+        return next_city
+
+    def route_distance(self, route):
+        distance = 0
+        for i in range(len(route) - 1):
+            distance += self.distances[route[i], route[i + 1]]
+        return distance
+
+    def update_pheromone(self, routes):
+        for route in routes:
+            distance = self.route_distance(route)
+            for i in range(len(route) - 1):
+                self.pheromone[route[i], route[i + 1]] += 1 / distance
+                self.pheromone[route[i + 1], route[i]] += 1 / distance
+                
+# Define distances between cities (replace this with your actual data)
+distances = np.array([
+    [0, 10, 15, 20],
+    [10, 0, 35, 25],
+    [15, 35, 0, 30],
+    [20, 25, 30, 0]
+])
+
+# Set parameters
+n_ants = 10
+n_iterations = 100
+decay = 0.1
+
+# Create and run AntColony
+aco = AntColony(distances, n_ants, n_iterations, decay)
+best_route, best_distance = aco.run()
+
+print("Best Route:", best_route)
+print("Best Distance:", best_distance)

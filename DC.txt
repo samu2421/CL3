@@ -1,0 +1,357 @@
+Assig 1
+
+#pip install xmlrpc
+#server.py
+from xmlrpc.server import SimpleXMLRPCServer
+import math
+
+
+def factorial(n: int):
+    return math.factorial(n)
+
+
+server = SimpleXMLRPCServer(("localhost", 8000))
+print("Listening on port 8000...")
+server.register_function(factorial, "factorial")
+server.serve_forever()
+
+"""
+python server.py
+python client.py
+"""
+
+#client.py
+import xmlrpc.client
+
+with xmlrpc.client.ServerProxy("http://127.0.0.1:8000/") as proxy:
+    print('Connection Established')
+    u_i = input('Enter no.: ')
+
+    try:
+        if not u_i:
+            raise ValueError("No input provided")
+
+        num = int(u_i)
+
+        result = proxy.factorial(num)
+        print(f"Factorial of {num}: {result}")
+
+    except ValueError as ve:
+        print(f"Error: {ve}")
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+Assig 2
+
+#pip install Pyro5 or pip install Pyro5[ns]
+
+#server.py
+import Pyro5.api
+
+@Pyro5.api.expose
+class StringConcatenationServer:
+    def concatenate_strings(self, str1, str2):
+        result = str1 + str2
+        return result
+
+def main():
+    daemon = Pyro5.api.Daemon()
+    ns = Pyro5.api.locate_ns()
+
+    uri = daemon.register(StringConcatenationServer)
+    ns.register("string_concatenation_server", uri)
+
+    print("Server is ready.")
+    daemon.requestLoop()
+
+if __name__ == "__main__":
+    main()
+
+"""
+pyro5-ns (or python Pyro5.nameserver)
+python server.py
+python client.py
+"""
+
+#client.py
+import Pyro5.api
+
+def main():
+    uri = "PYRONAME:string_concatenation_server"
+    with Pyro5.api.Proxy(uri) as server:
+        str1 = input("Enter the first string: ")
+        str2 = input("Enter the second string: ")
+
+        result = server.concatenate_strings(str1, str2)
+        print(f"Concatenation result: {result}")
+
+
+if __name__ == "__main__":
+    main()
+
+    
+Assig 3
+
+import time
+
+class LoadBalancer:
+    def __init__(self, servers):
+        self.servers = servers
+        self.current_server = 0
+
+    def distribute_request(self, request):
+        server = self.get_next_server()
+        print(f"Request {request} sent to Server {server}")
+        time.sleep(0.5)
+
+    def get_next_server(self):
+        next_server = self.current_server
+        self.current_server = (self.current_server + 1) % len(self.servers)
+        return self.servers[next_server]
+
+def simulate_client_requests(load_balancer, num_requests):
+    for i in range(1, num_requests + 1):
+        load_balancer.distribute_request(i)
+
+if __name__ == "__main__":
+    server_addresses = ['Server A', 'Server B', 'Server C']
+    load_balancer = LoadBalancer(server_addresses)
+
+    simulate_client_requests(load_balancer, 10)
+
+"python load_balancer.py"
+
+Assig 4
+
+#HotelServer.java
+
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.util.InputMismatchException;
+import java.util.Map;
+import java.util.Scanner;
+
+public class HotelClient {
+    public static void main(String[] args) {
+        try (Scanner scanner = new Scanner(System.in)) {
+            HotelInterface hotelService = (HotelInterface) Naming.lookup("rmi://localhost:1099/HotelService");
+
+            while (true) {
+                System.out.println("1. Book a room");
+                System.out.println("2. Cancel booking");
+                System.out.println("3. View booked rooms");
+                System.out.println("4. Exit");
+                System.out.print("Enter your choice: ");
+
+                try {
+                    int choice = scanner.nextInt();
+                    scanner.nextLine();
+
+                    switch (choice) {
+                        case 1:
+                            System.out.print("Enter guest name: ");
+                            String guestName = scanner.nextLine();
+                            System.out.print("Enter room number: ");
+                            int roomNumber = scanner.nextInt();
+                            boolean booked = hotelService.bookRoom(guestName, roomNumber);
+                            if (booked) {
+                                System.out.println("Room booked successfully.");
+                            } else {
+                                System.out.println("Booking failed. Guest may already have a booking.");
+                            }
+                            break;
+
+                        case 2:
+                            System.out.print("Enter guest name to cancel booking: ");
+                            String guestToCancel = scanner.nextLine();
+                            boolean canceled = hotelService.cancelBooking(guestToCancel);
+                            if (canceled) {
+                                System.out.println("Booking canceled successfully.");
+                            } else {
+                                System.out.println("Cancel booking failed. Guest may not have a booking.");
+                            }
+                            break;
+
+                        case 3:
+                            displayBookedRooms(hotelService);
+                            break;
+                            
+                        case 4:
+                            System.out.println("Exiting...");
+                            System.exit(0);
+                            break;
+                        default:
+                            System.out.println("Invalid choice. Please enter a valid option.");
+                    }
+                } catch (InputMismatchException e) {
+                    System.out.println("Invalid input. Please enter a valid number.");
+                    scanner.nextLine();
+                } catch (RemoteException e) {
+                    System.out.println("RemoteException: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void displayBookedRooms(HotelInterface hotelService) throws RemoteException {
+        Map<String, Integer> bookings = hotelService.getBookings();
+        if (bookings.isEmpty()) {
+            System.out.println("No rooms booked yet.");
+        } else {
+            System.out.println("Booked Rooms:");
+            for (Map.Entry<String, Integer> entry : bookings.entrySet()) {
+                System.out.println("Room " + entry.getValue() + " - " + entry.getKey());
+            }
+        }
+    }
+}
+
+#HotelClient.java
+
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.util.InputMismatchException;
+import java.util.Map;
+import java.util.Scanner;
+
+public class HotelClient {
+    public static void main(String[] args) {
+        try (Scanner scanner = new Scanner(System.in)) {
+            HotelInterface hotelService = (HotelInterface) Naming.lookup("rmi://localhost:1099/HotelService");
+
+            while (true) {
+                System.out.println("1. Book a room");
+                System.out.println("2. Cancel booking");
+                System.out.println("3. View booked rooms");
+                System.out.println("4. Exit");
+                System.out.print("Enter your choice: ");
+
+                try {
+                    int choice = scanner.nextInt();
+                    scanner.nextLine();
+
+                    switch (choice) {
+                        case 1:
+                            System.out.print("Enter guest name: ");
+                            String guestName = scanner.nextLine();
+                            System.out.print("Enter room number: ");
+                            int roomNumber = scanner.nextInt();
+                            boolean booked = hotelService.bookRoom(guestName, roomNumber);
+                            if (booked) {
+                                System.out.println("Room booked successfully.");
+                            } else {
+                                System.out.println("Booking failed. Guest may already have a booking.");
+                            }
+                            break;
+
+                        case 2:
+                            System.out.print("Enter guest name to cancel booking: ");
+                            String guestToCancel = scanner.nextLine();
+                            boolean canceled = hotelService.cancelBooking(guestToCancel);
+                            if (canceled) {
+                                System.out.println("Booking canceled successfully.");
+                            } else {
+                                System.out.println("Cancel booking failed. Guest may not have a booking.");
+                            }
+                            break;
+
+                        case 3:
+                            displayBookedRooms(hotelService);
+                            break;
+                            
+                        case 4:
+                            System.out.println("Exiting...");
+                            System.exit(0);
+                            break;
+                        default:
+                            System.out.println("Invalid choice. Please enter a valid option.");
+                    }
+                } catch (InputMismatchException e) {
+                    System.out.println("Invalid input. Please enter a valid number.");
+                    scanner.nextLine();
+                } catch (RemoteException e) {
+                    System.out.println("RemoteException: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void displayBookedRooms(HotelInterface hotelService) throws RemoteException {
+        Map<String, Integer> bookings = hotelService.getBookings();
+        if (bookings.isEmpty()) {
+            System.out.println("No rooms booked yet.");
+        } else {
+            System.out.println("Booked Rooms:");
+            for (Map.Entry<String, Integer> entry : bookings.entrySet()) {
+                System.out.println("Room " + entry.getValue() + " - " + entry.getKey());
+            }
+        }
+    }
+}
+
+#HotelInterface.java
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.Map;
+
+public interface HotelInterface extends Remote {
+  boolean bookRoom(String guestName, int roomNumber) throws RemoteException;
+
+  boolean cancelBooking(String guestName) throws RemoteException;
+
+  Map<String, Integer> getBookings() throws RemoteException;
+}
+
+Assig 5 (need dataset)
+
+#pip install mrjob
+
+from mrjob.job import MRJob
+from mrjob.step import MRStep
+import csv
+from datetime import datetime
+
+
+class CalculateGrades(MRJob):
+
+    def steps(self):
+        return [
+            MRStep(mapper=self.mapper,
+                   reducer=self.reducer)
+        ]
+
+    def mapper(self, _, line):
+        if line.startswith('date'):
+            return
+          
+        temp = {}
+
+        reader = csv.reader([line])
+        for row in reader:
+            date, tmx, tmn = str(row[0]), float(row[2]), float(row[3])
+            temp[date] = tmx
+        yield _, temp
+
+    def reducer(self, key, value):
+      t = list(value)
+      max_pair = max(t, key=lambda x: list(x.values())[0])
+      
+      max_pair_key = list(max_pair.keys())[0]
+      max_pair_value = max_pair[max_pair_key]
+
+      yield max_pair_key, max_pair_value
+
+
+if __name__ == "__main__":
+    CalculateGrades.run()
+
+"""
+python weather_analysis.py weather.csv
+"""
